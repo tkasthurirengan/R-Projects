@@ -1,0 +1,44 @@
+#The goal is to do Market Basket Analysis to understand the customer pattern in rating of products in e-commerce site, Amazon. 
+#Six product categories have been chosen. The data is loaded into Hadoop environment for preprocessing. 
+#Using ‘PySpark’, list of products rated by each user is obtained. 
+#The result from ‘PySpark’ has been loaded in ‘R’ and performed Market Basket Analysis using Apriori Algorithm. 
+
+## Pyspark Program to preprocess the data. 
+
+import csv
+input =sc.textFile('hdfs://localhost:8020/user/root/Task3/task0.csv')
+Test = input.mapPartitions(lambda x: csv.reader(x))
+VarImp=Test.map(lambda x: (x[0],x[5]))
+FinalResult = VarImp.groupByKey().map(lambda x: (x[0],list(x[1])))
+df = sqlContext.createDataFrame(FinalResult, ['UserId', 'Category'])
+def toCSVLine(data):
+  return ','.join(str(d) for d in data)
+lines = df.map(toCSVLine)
+lines.coalesce(1).saveAsTextFile('hdfs://localhost:8020/user/root/Task3/task3.csv')
+
+#R programming to do Market Basket Analysis
+
+setwd("D:/")
+MBA=read.table("MBA.txt",sep = ',',blank.lines.skip = FALSE)
+MBA=MBA[-1]
+
+write.csv(MBA,file="TestMBA.csv",row.names = FALSE)
+
+#install.packages("arules")
+library(arules)
+MBA=read.transactions('MBA.txt',sep=',',rm.duplicates = TRUE)
+
+MBA1=read.table("MBA.txt",sep = ',',blank.lines.skip = FALSE)
+MBA1=MBA1[-1]
+
+#Removing all the duplicates from the data. 
+MBA2=read.transactions(MBA1,rm.duplicates = TRUE)
+
+summary(MBA)
+#Choosing the top 6 items
+itemFrequencyPlot(MBA, topN = 6)
+
+#Determining the support and confidence of the results. 
+
+rules = apriori(data = MBA,parameter = list(support=0.0009,confidence=0.4))
+inspect(sort(rules, by = 'lift')[1:3])
