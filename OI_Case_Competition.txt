@@ -1,0 +1,87 @@
+#######################
+This dataset consists of Various Customers and the products which is being shipped to various countries. 
+In this Analysis, we are trying to analyse the purchasing trends by various customers across regions. 
+The first part is the visualization of data and the second part is the cluster analysis. 
+This program is executed in R Studio. 
+
+###########################
+######### Part 1###########
+###########################
+
+setwd("D:")
+library(readxl)
+OIS <- read_excel("D:/Student_Raw_Data_2017.xlsx")
+attach(OIS)
+
+library(ggplot2)
+
+#The below plot depicts the amount of shipment, that has been shipped to various customers. 
+
+pieces<-ggplot(OIS,aes(x=OIS$`Ship to Country name`,y=OIS$Pieces,fill=`Ship to Country name`))+
+  geom_bar(stat="identity")+theme_minimal()
+pieces + labs(x="Country",y="Pieces")+coord_flip()
+
+#This graph provides the overall products that is being shipped. In this we can infer which products are we selling the most. 
+
+ProdCat<-ggplot(OIS,aes(x=`Production Category`,y=Pieces/10000000,fill=`Production Category`))+
+  geom_bar(stat="identity")+theme_minimal()
+ProdCat + labs(x="Production Category",y="Pieces")+coord_flip()
+
+#From the figure 1, we can see only two major countries is where our major customers are, so we are drilling in more in those two countries to get more insights. 
+
+Colomb<- subset(OIS,`Ship to Country name`== "Colombia")
+q<-ggplot(Colomb,aes(x=Colomb$`Production Category`,y=Colomb$Pieces/10000000,fill=`Production Category`))+
+  geom_bar(stat="identity")+theme_minimal()
+q + labs(x="Colombia - Product Category",y="Pieces")+coord_flip()
+
+#This is the second country. 
+DRCK<- subset(OIS,`Ship to Country name`=="Democratic Republic of the Congo (Kinshasa)")
+w<-ggplot(DRCK,aes(x=DRCK$`Production Category`,y=DRCK$Pieces/10000000,fill=`Production Category`))+
+  geom_bar(stat="identity")+theme_minimal()
+w + labs(x="DRCK - Production Category",y="Pieces")+coord_flip()
+
+
+#############################
+#########Part 2##############
+#############################
+setwd("D:")
+library(readxl)
+OIS <- read_excel("D:/Student_Raw_Data_2017.xlsx")
+attach(OIS)
+
+#Subsetting data to take the variable of importance. 
+SubData<- OIS[,c(3,6,7)]
+
+#Encoding with Numerical Values
+SubData$`Production Category`=factor(SubData$`Production Category`,
+                                     levels = c('NAB','Food','SPIRITS','WINE','BEER','Miscellaneous','Drug & Chemical'),
+                                     labels = c(1,2,3,4,5,6,7))
+
+SubData$`Ship to Country name`=factor(SubData$`Ship to Country name`,
+                                     levels = c('Colombia','Democratic Republic of the Congo (Kinshasa)','Comoros','Congo, Republic of (Brazzaville)','Croatia','Cuba','Cyprus','Czech Republic','Denmark','Djibouti','Dominica','Dominican Republic','English English Name'),
+                                     labels = c(1,2,3,4,5,6,7,8,9,10,11,12,13))
+SubData$Pieces=as.numeric(SubData$Pieces)
+SubData$`Production Category`=as.numeric(SubData$`Production Category`)
+SubData$`Ship to Country name`=as.numeric(SubData$`Ship to Country name`)
+
+
+#Splitting the data into Training and Test
+library(caTools)
+split = sample.split(SubData$Pieces, SplitRatio = 0.80)
+training_set = subset(SubData, split == TRUE)
+test_set = subset(SubData, split == FALSE)
+
+library(fpc)
+training_set<-training_set[complete.cases(training_set),]
+set.seed(100)
+wcss<-vector()
+for (i in 1:10)wcss[i]<-sum(kmeans(training_set,i)$withinss)
+plot(1:10,wcss,type = "b",main=paste('Cluster of clients'))
+
+
+
+result<-kmeans(training_set,4)
+plotcluster(training_set,result$cluster)
+
+out<-cbind(training_set,clusterNum=result$cluster)
+head(out)
